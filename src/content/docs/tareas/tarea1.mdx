@@ -1,0 +1,365 @@
+---
+title : Tarea 1. Programa para Generar Homoclave
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Descripción
+
+Los datos de entrada se encuentran en un archivo con `extensión.dat` (por ejemplo `persona.dat`). Cada
+línea del archivo tiene los datos de una persona, a saber: Nombre completo, fecha de nacimiento en
+formato (dia/mes/año).
+
+El programa deberá ser capaz de calcular:
+
+- El RFC con homoclave de cada persona registrada en el archivo de entrada.
+- La edad actual, con base en el día en que se ejecute el programa, de la persona registrada en el archivo .dat
+
+El programa deberá obtener como salidas:
+
+- Un archivo de salida .dat (por ejemplo RFC.dat). Cada línea de este archivo es una cadena correspondiente al RFC calculado.
+- Un archivo denominado .dat (nombreEdadRFC.dat). Cada línea de este archivo deberá contener el nombre, fecha de nacimiento, edad actual y RFC de la persona.
+
+El alumno debe investigar:
+
+- El procedimiento para generar un RFC, así como el procedimiento para generar la homoclave.
+De tal manera que cada RFC sea único para cada registro del archivo original.
+- El procedimiento para calcular la edad actual con base en la fecha de nacimiento y la fecha de
+hoy. Validar que los años estén cumplidos.
+- El procedimiento para calcular la edad con base en la fecha de nacimiento y una fecha
+específicada por el usuario.
+
+Ejemplo para el archivo de entrada llamado nombres.dat
+
+```txt
+// nombres.dat
+Nombre Fecha
+Juan José Martínez Sánchez 06/08/1968
+Pedro López García 15/12/1971
+María Magdalena Santos Alarcón 09/02/1979
+María Mercedes Salas Antúnez 09/02/1979
+María Concepción Gómez Flores 30/12/1970
+```
+
+Ejemplo para los archivo de salida:
+
+```txt
+// RFC.dat
+RFC
+MASJ680806M90
+LOGP711215P20
+SAAM790209N80
+SAAM790209L30
+GOFC701230S10
+```
+
+Suponiendo que hoy es 10/12/2022 entonces el archivo nombreEdadRFC.dat tendría los siguientes registros.
+
+```txt
+// nombreEdadRFC.dat
+Nombre Fecha RFC
+Juan José Martínez Sánchez 06/08/1968 54 MASJ680806M90
+Pedro López García 15/12/1971 50 LOGP710209P20
+María Magdalena Santos Alarcón 09/02/1979 43 SAAM790209N80
+María Mercedes Salas Antúnez 09/02/1979 43 SAAM790209L30
+María Concepción Gómez Flores 30/12/1970 51 GOFC700701S10
+```
+
+## Desarrollo
+
+### Diagrama de Clases
+
+![Diagrama de Clases](/tareas/tarea1/diagrama.png)
+
+:::note[Nota]
+En la liga [Tarea1. Generar Homoclave](/tareas/tarea1/GeneradorRFC.rar) podras descargar el proyecto completo.
+:::
+
+### Programa
+
+#### Clase Persona 
+
+```java
+// Persona.java
+package Clases;
+
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
+
+public class Persona {
+    
+    private String nombres;
+    private String apellidoPaterno;
+    private String apellidoMaterno;
+    private final LocalDate fechaNacimiento;
+
+    public Persona(
+        String nombres, String apellidoPaterno, 
+        String apellidoMaterno, LocalDate fechaNacimiento
+    ) {
+        this.nombres = nombres;
+        this.apellidoPaterno = apellidoPaterno;
+        this.apellidoMaterno = apellidoMaterno;
+        this.fechaNacimiento = fechaNacimiento;
+    }
+
+    public String getNombres() {
+        return nombres;
+    }
+
+    public void setNombres(String nombres) {
+        this.nombres = nombres;
+    }
+
+    public String getApellidoPaterno() {
+        return apellidoPaterno;
+    }
+
+    public void setApellidoPaterno(String apellidoPaterno) {
+        this.apellidoPaterno = apellidoPaterno;
+    }
+
+    public String getApellidoMaterno() {
+        return apellidoMaterno;
+    }
+
+    public void setApellidoMaterno(String apellidoMaterno) {
+        this.apellidoMaterno = apellidoMaterno;
+    }
+
+    public LocalDate getFechaNacimiento() {
+        return fechaNacimiento;
+    }
+
+    @Override
+    public String toString() {
+        LocalDate fechaActual = LocalDate.now();
+        Period periodo = Period.between(this.fechaNacimiento, fechaActual);
+        return this.nombres + " " + this.apellidoPaterno + " " + 
+            this.apellidoMaterno + " " + 
+            this.fechaNacimiento.format(
+                DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            ) + " " + periodo.getYears();
+    }
+    
+}
+```
+
+#### Clase GeneradorRFC
+
+```java
+
+package Clases;
+
+import java.time.LocalDate;
+import java.util.Random;
+
+public class GeneradorRFC {
+    
+    public static String generarRFC( Persona persona ) {
+        LocalDate fechaNacimiento = persona.getFechaNacimiento();
+        String app = persona.getApellidoPaterno().substring(0, 2);
+        String apm = persona.getApellidoMaterno().substring(0, 1);
+        String nom = persona.getNombres().substring(0 ,1);
+        String day = String.valueOf( fechaNacimiento.getDayOfMonth() );
+        day = day.length() == 1 ? "0" + day : day;
+        String month = String.valueOf( fechaNacimiento.getMonthValue() );
+        month = month.length() == 1 ? "0" + month : month;
+        String year = String.valueOf( fechaNacimiento.getYear() ).substring(2, 4);
+        return app + apm + nom + year + month + day + generarHomoclave();
+    }
+    
+    private static String generarHomoclave() {
+        Random rnd = new Random();
+        String homoclave = "";
+        for( int i = 0 ; i < 3 ; i++ ){
+            boolean valor = rnd.nextBoolean();
+            if( valor ) {
+                homoclave = homoclave + rnd.nextInt(10);
+            }else {
+                homoclave = homoclave + (char)(rnd.nextInt(26) +65);
+            }
+        }
+        return homoclave;
+    }
+    
+}
+
+```
+
+#### Clase PersonaFisica
+
+```java 
+package Clases;
+
+public class PersonaFisica {
+    
+    private Persona persona;
+    private final String rfc;
+    
+    public PersonaFisica( Persona persona ) {
+        this.persona = persona;
+        this.rfc = GeneradorRFC.generarRFC(persona);
+    }
+    
+    public String getRFC(){
+        return this.rfc;
+    }
+
+    @Override
+    public String toString() {
+        return this.persona.toString() + " " + this.rfc;
+    }
+    
+}
+```
+
+#### Clase TransformadorDatos
+
+```java
+package Clases;
+
+import java.text.Normalizer;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+
+public class TransformadorDatos {
+
+    public static ArrayList<Persona> transformarStringPersonas(ArrayList<String> datos) {
+        ArrayList<Persona> personas = new ArrayList<>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        for (String parrafo : datos) {
+            String[] elementos = parrafo.split(" ");
+            for (int i = 0; i < elementos.length; i++) {
+                String cadenaNormalize = Normalizer
+                    .normalize(elementos[i], Normalizer.Form.NFD);
+                elementos[i] = cadenaNormalize.replaceAll("[^\\p{ASCII}]", "");
+            }
+
+            if (elementos.length == 4) {
+                personas.add(
+                new Persona(
+                    elementos[0].toUpperCase(), 
+                    elementos[1].toUpperCase(), 
+                    elementos[2].toUpperCase(), 
+                    LocalDate.parse(elementos[3], fmt)
+                )
+                );
+            } else {
+                personas.add(
+                    new Persona(
+                        elementos[0].toUpperCase() + " " + elementos[1].toUpperCase(), 
+                        elementos[2].toUpperCase(), 
+                        elementos[3].toUpperCase(), 
+                        LocalDate.parse(elementos[4], fmt)
+                    )
+                );
+            }
+        }
+        return personas;
+    }
+
+    public static ArrayList<String> transformarPersonasFisicasString(
+        ArrayList<PersonaFisica> personasFisicas
+    ) {
+        ArrayList<String> parrafos = new ArrayList<>();
+        for (PersonaFisica personaFisica : personasFisicas) {
+            parrafos.add(personaFisica.toString());
+        }
+        return parrafos;
+    }
+
+    public static ArrayList<PersonaFisica> transformarPersonasPersonasFisicas(
+        ArrayList<Persona> personas
+    ) {
+        ArrayList<PersonaFisica> personasFisicas = new ArrayList<>();
+        for (Persona persona : personas) {
+            personasFisicas.add( new PersonaFisica(persona) );
+        }
+        return personasFisicas;
+    }
+
+}
+```
+
+#### Clase GestorArchivo
+
+```java 
+package Clases;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+public class GestorArchivo {
+    
+    public static ArrayList<String> leerDatos( String nombreArchivo ) {
+        ArrayList<String> datos = new ArrayList<>();
+        try {
+            Scanner entrada = new Scanner( 
+                new File( "ArchivosEntrada/" + nombreArchivo ) 
+            );
+            while (entrada.hasNext()) {
+                datos.add( entrada.nextLine() );
+            }
+        } catch (FileNotFoundException ex) {
+            System.out.println("Ocurrio un error al leer el archivo");
+        }
+        return  datos;
+    }
+    
+    public static void escribirDatos( 
+        String nombreArchivo , ArrayList<String> datos 
+    ){
+        BufferedWriter bw = null;
+        FileWriter fw = null;
+        try {
+            File archivo = new File("ArchivosSalida/"+nombreArchivo);
+            fw = new FileWriter(archivo.getAbsoluteFile(), true);
+            bw = new BufferedWriter(fw);
+            for( String parrafo : datos ){
+                bw.write( "\n"+parrafo );
+            }
+        } catch (IOException ex) {
+            System.out.println(
+                "Ocurrrio un erro al escribir en el archivo"
+            );
+        } finally {
+            try {
+                if(bw != null) bw.close();
+                if(fw != null) fw.close();
+            } catch(IOException ex) {
+                System.out.println(
+                    "Ocurrio un error al cerrar las instacias de escritura"
+                );
+            }
+        } 
+    }
+}
+```
+
+#### Clase Principal
+
+```java 
+package Principal;
+
+import Clases.*;
+import java.util.ArrayList;
+
+public class App {
+    public static void main(String[] args) {
+        ArrayList<String> datosEntrada = GestorArchivo.leerDatos(
+            "nombres.dat"
+        );
+        ArrayList<Persona> personas = TransformadorDatos
+            .transformarStringPersonas(datosEntrada);
+        ArrayList<PersonaFisica> personasFisicas = TransformadorDatos
+            .transformarPersonasPersonasFisicas(personas);
+        ArrayList<String> datosSalida = TransformadorDatos
+            .transformarPersonasFisicasString(personasFisicas);
+        GestorArchivo.escribirDatos("nombreEdadRFC.dat", datosSalida);
+    }
+}
+```
